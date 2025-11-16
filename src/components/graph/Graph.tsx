@@ -1040,7 +1040,7 @@ export const Graph = forwardRef<GraphRef, GraphProps>(
         viewBox={`0 0 ${width} ${height}`}
         style={{
           width: "100%",
-          height: `${height}px`,
+          height: "100%",
           backgroundColor: theme.background,
           borderRadius: "8px",
           cursor: "grab",

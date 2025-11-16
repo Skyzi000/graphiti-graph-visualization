@@ -7,6 +7,8 @@ import type {
   RawTriplet,
   NodePopupContent,
   EdgePopupContent,
+  Node,
+  Edge,
 } from "@/lib/types/graph";
 import { toGraphTriplets } from "@/lib/utils/graph";
 import { createLabelColorMap, getNodeColor } from "@/lib/utils/nodeColors";
@@ -23,6 +25,8 @@ interface GraphVisualizationProps {
   height?: number;
   zoomOnMount?: boolean;
   className?: string;
+  onNodeSelect?: (node: Node) => void;
+  onEdgeSelect?: (edge: Edge) => void;
 }
 
 // eslint-disable-next-line react/display-name
@@ -34,6 +38,8 @@ export const GraphVisualization = forwardRef<GraphRef, GraphVisualizationProps>(
       height = window.innerHeight * 0.85,
       zoomOnMount = true,
       className = "border border-border rounded-md h-[85vh] overflow-hidden relative",
+      onNodeSelect,
+      onEdgeSelect,
     },
     ref
   ) => {
@@ -99,6 +105,10 @@ export const GraphVisualization = forwardRef<GraphRef, GraphVisualizationProps>(
       });
       setShowNodePopup(true);
       setShowEdgePopup(false);
+
+      if (node && onNodeSelect) {
+        onNodeSelect(node);
+      }
     };
 
     // Handle edge click
@@ -117,6 +127,10 @@ export const GraphVisualization = forwardRef<GraphRef, GraphVisualizationProps>(
       });
       setShowEdgePopup(true);
       setShowNodePopup(false);
+
+      if (onEdgeSelect) {
+        onEdgeSelect(triplet.edge);
+      }
     };
 
     // Handle popover close

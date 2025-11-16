@@ -1,0 +1,16 @@
+node_modules
+.next
+.turbo
+dist
+out
+build
+.git
+.gitignore
+.env*
+!.env.example
+.DS_Store
+*.log
+.venv*
+graphiti_service/.venv*
+__pycache__
+.pytest_cache

@@ -37,9 +37,14 @@ export function GraphPopovers({
     }
 
     // Check if node has primaryLabel property (GraphNode)
-    const nodeAny = nodePopupContent.node as any;
-    if (nodeAny.primaryLabel && typeof nodeAny.primaryLabel === "string") {
-      return nodeAny.primaryLabel;
+    const nodeWithPrimaryLabel = nodePopupContent.node as {
+      primaryLabel?: string;
+    };
+    if (
+      nodeWithPrimaryLabel.primaryLabel &&
+      typeof nodeWithPrimaryLabel.primaryLabel === "string"
+    ) {
+      return nodeWithPrimaryLabel.primaryLabel;
     }
 
     // Fall back to original logic with labels
