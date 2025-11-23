@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { Component, useState } from "react";
 import { useViewerStore } from "@/lib/stores/viewerStore";
 import {
   useDeleteNodeMutation,
@@ -22,11 +22,175 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { formatDate } from "@/lib/utils/dates";
 import { toast } from "sonner";
 
+const DETAILS_REGEX = /<\/?details|<\/?summary/i;
+
+const markdownComponents: Components = {
+  code({ className, children, ...props }) {
+    const isInline = !className?.includes("language-");
+    if (isInline) {
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <pre className={className}>
+        <code {...props}>{children}</code>
+      </pre>
+    );
+  },
+  details({ children, ...props }) {
+    return (
+      <details
+        className="my-2 rounded-lg border bg-background/60 p-3 marker:text-muted-foreground open:shadow-sm"
+        {...props}
+      >
+        {children}
+      </details>
+    );
+  },
+  summary({ children, ...props }) {
+    return (
+      <summary
+        className="cursor-pointer select-none text-sm font-semibold text-primary outline-none"
+        {...props}
+      >
+        {children}
+      </summary>
+    );
+  },
+};
+
+function decodeHtml(html: string) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = html;
+  return textarea.value;
+}
+
+function injectToolResultIntoDetails(markdown: string): string {
+  if (!DETAILS_REGEX.test(markdown)) return markdown;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(markdown, "text/html");
+    for (const details of Array.from(doc.querySelectorAll("details"))) {
+      const resultAttr = details.getAttribute("result");
+      const nameAttr = details.getAttribute("name");
+      const argsAttr = details.getAttribute("arguments");
+      if (!resultAttr && !nameAttr && !argsAttr) continue;
+
+      const summary = details.querySelector("summary");
+
+      const container = doc.createElement("div");
+      container.className =
+        "mt-2 space-y-2 rounded-md border bg-muted/20 p-2 text-xs";
+
+      if (nameAttr) {
+        const nameP = doc.createElement("p");
+        nameP.className = "font-semibold text-primary";
+        nameP.textContent = decodeHtml(nameAttr);
+        container.appendChild(nameP);
+      }
+
+      if (argsAttr) {
+        const argsPre = doc.createElement("pre");
+        argsPre.className =
+          "whitespace-pre-wrap break-words rounded bg-muted/40 p-2";
+        const decoded = decodeHtml(argsAttr).trim();
+
+        const candidates: string[] = [
+          decoded,
+          decoded.replace(/^"(.*)"$/, "$1"),
+          decoded.replace(/^'(.*)'$/, "$1"),
+          decoded.replace(/\\"/g, '"'),
+          decoded.replace(/\\\\/g, "\\"),
+          decoded.replace(/\\"/g, '"').replace(/\\\\/g, "\\"),
+        ].filter(Boolean);
+
+        let parsed: unknown = null;
+        for (const candidate of candidates) {
+          try {
+            parsed = JSON.parse(candidate);
+            break;
+          } catch {
+            continue;
+          }
+        }
+
+        if (typeof parsed === "string") {
+          try {
+            parsed = JSON.parse(parsed);
+          } catch {
+            // keep as string
+          }
+        }
+
+        argsPre.textContent =
+          parsed && typeof parsed === "object"
+            ? JSON.stringify(parsed, null, 2)
+            : decoded;
+        container.appendChild(argsPre);
+      }
+
+      if (resultAttr) {
+        const resultPre = doc.createElement("pre");
+        resultPre.className =
+          "whitespace-pre-wrap break-words rounded bg-muted/30 p-2";
+        resultPre.textContent = decodeHtml(resultAttr);
+        container.appendChild(resultPre);
+      }
+
+      details.removeAttribute("result");
+      details.removeAttribute("arguments");
+      details.removeAttribute("name");
+
+      if (summary?.parentElement === details) {
+        summary.after(container);
+      } else {
+        details.prepend(container);
+      }
+    }
+    return doc.body.innerHTML || markdown;
+  } catch (error) {
+    console.error("injectToolResultIntoDetails failed", error);
+    return markdown;
+  }
+}
+
 interface NodeDetailPanelProps {
-  graphRef: React.RefObject<GraphRef | null>;
+  readonly graphRef: React.RefObject<GraphRef | null>;
+}
+
+class MarkdownErrorBoundary extends Component<
+  { readonly fallback: React.ReactNode; readonly children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { readonly fallback: React.ReactNode; readonly children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("Markdown render error", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
 }
 
 export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
@@ -180,26 +344,48 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
               Episode ({episodes.length})
             </h5>
             <ul className="mt-2 space-y-2 text-sm">
-              {episodes.map((episode) => (
-                <li key={episode.uuid}>
-                  <Collapsible>
-                    <CollapsibleTrigger className="group flex w-full items-start gap-2 rounded-2xl border bg-background/40 p-3 text-left hover:bg-background/60 transition-colors">
-                      <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">{episode.summary}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(episode.timestamp, "YYYY/MM/DD HH:mm")}
-                        </p>
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="ml-6 mt-2 rounded-xl border bg-muted/30 p-3">
-                        <p className="text-sm whitespace-pre-wrap">{episode.content}</p>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </li>
-              ))}
+              {episodes.map((episode) => {
+                const markdown =
+                  typeof episode.content === "string" ? episode.content : "";
+                const withInjected = injectToolResultIntoDetails(markdown);
+                const fallbackPre = (
+                  <pre className="mt-3 whitespace-pre-wrap break-words rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+                    {withInjected || "(内容なし)"}
+                  </pre>
+                );
+
+                return (
+                  <li key={episode.uuid}>
+                    <Collapsible>
+                      <CollapsibleTrigger className="group flex w-full items-start gap-2 rounded-2xl border bg-background/40 p-3 text-left hover:bg-background/60 transition-colors">
+                        <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{episode.summary}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDate(episode.timestamp, "YYYY/MM/DD HH:mm")}
+                          </p>
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="ml-6 mt-2 rounded-xl border bg-muted/30 p-3">
+                          <div className="text-sm leading-relaxed space-y-2 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-xs [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+                            <MarkdownErrorBoundary fallback={fallbackPre}>
+                              <ReactMarkdown
+                                components={markdownComponents}
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                skipHtml={false}
+                              >
+                                {withInjected}
+                              </ReactMarkdown>
+                            </MarkdownErrorBoundary>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -309,8 +495,8 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
 }
 
 interface MetricProps {
-  label: string;
-  value: string;
+  readonly label: string;
+  readonly value: string;
 }
 
 function Metric({ label, value }: MetricProps) {
