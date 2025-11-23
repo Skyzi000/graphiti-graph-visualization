@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, time, timezone
 from typing import Annotated, List, Literal
 
 from fastapi import FastAPI, Query
@@ -10,6 +10,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from .graphiti_client import close_graphiti
 from .schemas import GraphQuery, GraphResponse, NodeDetailQuery, NodeDetailResponse
 from .service import get_graph, get_node_detail
+
+
+def _normalize_datetime(value: datetime | None, *, is_until: bool = False) -> datetime | None:
+  """Ensure datetimes are timezone-aware (UTC) and expand date-only `until` to end-of-day.
+
+  FastAPI parses `YYYY-MM-DD` as naive datetime at 00:00:00. To make comparisons
+  against Graphiti's UTC timestamps safe, we:
+  - attach UTC tzinfo when missing
+  - convert aware datetimes to UTC
+  - for `until` with midnight time (common for date-only), shift to end-of-day
+  """
+
+  if value is None:
+    return None
+
+  if value.tzinfo is None:
+    value = value.replace(tzinfo=timezone.utc)
+  else:
+    value = value.astimezone(timezone.utc)
+
+  if is_until and value.timetz().replace(tzinfo=None) == time(0, 0):
+    value = value.replace(hour=23, minute=59, second=59, microsecond=999000)
+
+  return value
 
 
 def _allowed_origins() -> list[str]:
@@ -61,8 +85,8 @@ async def get_graph_endpoint(
     mode=mode,
     node_ids=node_ids,
     center_uuid=center_uuid,
-    since=since,
-    until=until,
+    since=_normalize_datetime(since),
+    until=_normalize_datetime(until, is_until=True),
     search=search,
     limit_nodes=limit_nodes,
     limit_edges=limit_edges,

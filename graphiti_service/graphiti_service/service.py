@@ -37,7 +37,19 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     return None
 
 
+def _as_utc(dt: datetime | None) -> datetime | None:
+  """Return timezone-aware UTC datetime; attach UTC when naive."""
+  if dt is None:
+    return None
+  if dt.tzinfo is None:
+    return dt.replace(tzinfo=UTC)
+  return dt.astimezone(UTC)
+
+
 def _within_window(node: GraphitiNode, since: datetime | None, until: datetime | None) -> bool:
+  since = _as_utc(since)
+  until = _as_utc(until)
+
   if since is None and until is None:
     return True
 
@@ -135,6 +147,15 @@ def _filter_episodes(
   if referenced_ids:
     result = [episode for episode in result if episode.uuid in referenced_ids]
 
+  if params.since or params.until:
+    since = _as_utc(params.since)
+    until = _as_utc(params.until)
+    result = [
+      episode
+      for episode in result
+      if _episode_within_window(episode, since, until)
+    ]
+
   if params.search:
     needle = params.search.lower()
     result = [
@@ -145,6 +166,24 @@ def _filter_episodes(
     ]
 
   return result
+
+
+def _episode_within_window(
+  episode: GraphitiEpisode,
+  since: datetime | None,
+  until: datetime | None,
+) -> bool:
+  candidate = _parse_timestamp(episode.timestamp)
+  if candidate is None:
+    return True
+
+  candidate = _as_utc(candidate)
+
+  if since and candidate < since:
+    return False
+  if until and candidate > until:
+    return False
+  return True
 
 
 def _filter_communities(
@@ -371,6 +410,11 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
     return []
 
   include_episodes = params.include_episodes
+  # NOTE: API level limit_nodes/limit_edges are applied *after* filtering.
+  # ここで DB 取得時に絞り込みすぎると、日付ウィンドウで本来残るはずの
+  # 新規ノード/エッジが落ちる。日付フィルタ使用時は取得段階での上限を外す。
+  node_fetch_limit = None if (params.since or params.until) else params.limit_nodes
+  edge_fetch_limit = None if (params.since or params.until) else params.limit_edges
 
   (
     entity_nodes,
@@ -380,10 +424,10 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
     community_edges,
     episodic_edges,
   ) = await asyncio.gather(
-    EntityNode.get_by_group_ids(driver, group_ids, limit=params.limit_nodes),
+    EntityNode.get_by_group_ids(driver, group_ids, limit=node_fetch_limit),
     CommunityNode.get_by_group_ids(driver, group_ids),
     EpisodicNode.get_by_group_ids(driver, group_ids) if include_episodes else _empty(),
-    EntityEdge.get_by_group_ids(driver, group_ids, limit=params.limit_edges),
+    EntityEdge.get_by_group_ids(driver, group_ids, limit=edge_fetch_limit),
     CommunityEdge.get_by_group_ids(driver, group_ids),
     EpisodicEdge.get_by_group_ids(driver, group_ids) if include_episodes else _empty(),
   )

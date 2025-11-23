@@ -54,6 +54,22 @@ function parseInteger(value: string | null | undefined): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function normalizeDateFilter(value: string | undefined, options?: { isUntil?: boolean }) {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!DATE_ONLY_REGEX.test(trimmed)) return trimmed;
+
+  // Build start/end of the selected local day, then send as UTC ISO string.
+  const [year, month, day] = trimmed.split("-").map(Number);
+  const start = new Date(year, month - 1, day, 0, 0, 0, 0); // local midnight
+  const end = new Date(year, month - 1, day, 23, 59, 59, 999); // local end-of-day
+
+  const chosen = options?.isUntil ? end : start;
+  return chosen.toISOString();
+}
+
 export function parseGraphQueryParams(
   searchParams: URLSearchParams
 ): GraphitiGraphQuery {
@@ -115,8 +131,8 @@ export function parseNodeDetailQueryParams(
 export function filtersToQuery(filters: GraphFilters): Partial<GraphitiGraphQuery> {
   return {
     search: filters.search,
-    since: filters.since,
-    until: filters.until,
+    since: normalizeDateFilter(filters.since),
+    until: normalizeDateFilter(filters.until, { isUntil: true }),
     include_episodes: filters.includeEpisodes,
     limit_nodes: filters.limitNodes,
     limit_edges: filters.limitEdges,
