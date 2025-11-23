@@ -290,6 +290,7 @@ def _episodic_node_to_episode(node: EpisodicNode) -> GraphitiEpisode:
   return GraphitiEpisode(
     uuid=node.uuid,
     summary=summary,
+    content=node.content,
     timestamp=timestamp or datetime.now(tz=UTC).isoformat(),
     tags=[node.source.value],
     message_ids=node.entity_edges,

@@ -48,6 +48,7 @@ class GraphitiEdge(BaseModel):
 class GraphitiEpisode(BaseModel):
   uuid: str
   summary: str
+  content: str
   timestamp: str
   importance: Optional[float] = None
   message_ids: Optional[List[str]] = None

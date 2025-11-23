@@ -16,7 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BadgeCheck, GitBranch, Loader2, Pin, Trash2 } from "lucide-react";
+import { BadgeCheck, ChevronDown, GitBranch, Loader2, Pin, Trash2 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { formatDate } from "@/lib/utils/dates";
 import { toast } from "sonner";
 
@@ -28,6 +33,7 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const groupId = useViewerStore((state) => state.selectedGroupId);
   const selectedNodeUuid = useViewerStore((state) => state.selectedNodeUuid);
+  const selectedNode = useViewerStore((state) => state.selectedNode);
   const setSelectedNodeUuid = useViewerStore((state) => state.setSelectedNodeUuid);
   const mode = useViewerStore((state) => state.mode);
 
@@ -77,9 +83,29 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
     );
   } else if (selectedNodeUuid && nodeQuery.isLoading) {
     content = (
-      <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <p className="text-sm">ノードの近傍を取得しています...</p>
+      <div className="space-y-5">
+        {selectedNode && (
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                {selectedNode.type || "entity"}
+              </span>
+              {selectedNode.community_id && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {selectedNode.community_id}
+                </span>
+              )}
+            </div>
+            <h4 className="mt-2 text-lg font-semibold">{selectedNode.name}</h4>
+            {selectedNode.summary && (
+              <p className="text-sm text-muted-foreground">{selectedNode.summary}</p>
+            )}
+          </div>
+        )}
+        <div className="flex flex-col items-center justify-center gap-2 py-4 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">詳細を取得中...</p>
+        </div>
       </div>
     );
   } else if (nodeQuery.error) {
@@ -131,33 +157,47 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
           {node.importance != null && (
             <Metric label="Importance" value={node.importance.toFixed(2)} />
           )}
-          {node.timestamps?.updated_at && (
-            <Metric
-              label="Updated"
-              value={formatDate(node.timestamps.updated_at, "YYYY/MM/DD")}
-            />
-          )}
           {node.timestamps?.created_at && (
             <Metric
-              label="Created"
+              label="作成日"
               value={formatDate(node.timestamps.created_at, "YYYY/MM/DD")}
             />
           )}
+          {node.timestamps?.updated_at &&
+            node.timestamps?.created_at &&
+            node.timestamps.updated_at !== node.timestamps.created_at && (
+              <Metric
+                label="更新日"
+                value={formatDate(node.timestamps.updated_at, "YYYY/MM/DD")}
+              />
+            )}
         </div>
 
         {episodes.length > 0 && (
           <div>
             <h5 className="flex items-center gap-2 text-sm font-semibold">
               <BadgeCheck className="h-4 w-4 text-primary" />
-              Episode
+              Episode ({episodes.length})
             </h5>
-            <ul className="mt-2 space-y-2 rounded-2xl border bg-background/40 p-3 text-sm">
+            <ul className="mt-2 space-y-2 text-sm">
               {episodes.map((episode) => (
-                <li key={episode.uuid} className="space-y-1">
-                  <p className="font-medium">{episode.summary}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(episode.timestamp, "YYYY/MM/DD HH:mm")}
-                  </p>
+                <li key={episode.uuid}>
+                  <Collapsible>
+                    <CollapsibleTrigger className="group flex w-full items-start gap-2 rounded-2xl border bg-background/40 p-3 text-left hover:bg-background/60 transition-colors">
+                      <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{episode.summary}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDate(episode.timestamp, "YYYY/MM/DD HH:mm")}
+                        </p>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-6 mt-2 rounded-xl border bg-muted/30 p-3">
+                        <p className="text-sm whitespace-pre-wrap">{episode.content}</p>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </li>
               ))}
             </ul>

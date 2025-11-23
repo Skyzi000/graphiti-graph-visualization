@@ -28,6 +28,7 @@ export function GraphitiExperience({
   const setSelectedNodeUuid = useViewerStore(
     (state) => state.setSelectedNodeUuid
   );
+  const setSelectedNode = useViewerStore((state) => state.setSelectedNode);
 
   const graphQuery = useGraphitiGraphQuery({
     groupId: selectedGroupId,
@@ -45,6 +46,7 @@ export function GraphitiExperience({
 
   const handleNodeSelect = (node: Node) => {
     setSelectedNodeUuid(node.uuid);
+    setSelectedNode(node);
   };
 
   const handleEdgeSelect = () => {

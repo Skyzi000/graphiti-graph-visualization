@@ -189,6 +189,7 @@ const sampleEpisodes: GraphitiEpisode[] = [
   {
     uuid: "episode-2025-02-05",
     summary: "Care team call logged from concierge nurse.",
+    content: "Nurse: Good afternoon Lena, this is Sarah from Nova Clinic following up on your session yesterday.\n\nLena: Hi Sarah, thanks for calling. I'm still feeling some soreness in my lower back from the micro-stimulation therapy.\n\nNurse: I understand. That's actually quite common in the first few sessions. How would you rate the discomfort on a scale of 1-10?\n\nLena: Probably a 4 or 5. It's manageable but noticeable.\n\nNurse: That's within the expected range. I'll make a note for Dr. Reid to review before your next appointment. In the meantime, gentle stretching and applying heat can help. Would you like me to schedule a follow-up call in a couple of days?\n\nLena: Yes, that would be great. Thank you for checking in.",
     timestamp: "2025-02-05T16:45:00.000Z",
     importance: 0.77,
     message_ids: ["call-8843", "note-221"],
@@ -197,6 +198,7 @@ const sampleEpisodes: GraphitiEpisode[] = [
   {
     uuid: "episode-2025-02-10",
     summary: "My Memory mobile entry about pain relief.",
+    content: "Feeling much better today after the second micro-stimulation session. The soreness from last week has completely subsided. I noticed improved mobility in my lower back this morning - was able to do my full stretching routine without any discomfort. The therapy seems to be working. Looking forward to discussing progress with Dr. Reid at the next appointment.",
     timestamp: "2025-02-10T14:20:00.000Z",
     importance: 0.62,
     message_ids: ["memory-1033"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { GraphFilters, GraphMode } from "@/lib/types/graph";
+import { GraphFilters, GraphMode, Node } from "@/lib/types/graph";
 import { DEFAULT_LIMIT_NODES } from "@/lib/services/graphiti";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -21,6 +21,7 @@ interface ViewerState {
   filters: GraphFilters;
   filtersRevision: number;
   selectedNodeUuid: string | null;
+  selectedNode: Node | null;
   mode: GraphMode;
   setSelectedGroupId: (
     groupId: string,
@@ -30,6 +31,7 @@ interface ViewerState {
   applyFilters: (nextFilters: GraphFilters) => void;
   resetFilters: () => void;
   setSelectedNodeUuid: (uuid: string | null) => void;
+  setSelectedNode: (node: Node | null) => void;
   setMode: (mode: GraphMode) => void;
 }
 
@@ -46,6 +48,7 @@ export const useViewerStore = create<ViewerState>()(
       filters: { ...defaultGraphFilters },
       filtersRevision: 0,
       selectedNodeUuid: null,
+      selectedNode: null,
       mode: "viewer",
       setSelectedGroupId: (groupId, options) => {
         const trimmed = groupId.trim();
@@ -93,6 +96,7 @@ export const useViewerStore = create<ViewerState>()(
           filtersRevision: state.filtersRevision + 1,
         })),
       setSelectedNodeUuid: (uuid) => set({ selectedNodeUuid: uuid }),
+      setSelectedNode: (node) => set({ selectedNode: node }),
       setMode: (mode) => set({ mode }),
     }),
     {

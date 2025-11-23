@@ -39,6 +39,7 @@ export interface GraphitiEdge {
 export interface GraphitiEpisode {
   uuid: string;
   summary: string;
+  content: string;
   timestamp: string;
   importance?: number;
   message_ids?: string[];
