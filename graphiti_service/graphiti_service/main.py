@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .graphiti_client import close_graphiti
 from .schemas import GraphQuery, GraphResponse, NodeDetailQuery, NodeDetailResponse
-from .service import get_graph, get_node_detail
+from .service import delete_node, get_graph, get_node_detail
 
 
 def _normalize_datetime(value: datetime | None, *, is_until: bool = False) -> datetime | None:
@@ -108,6 +108,15 @@ async def get_node_detail_endpoint(
 ):
   query = NodeDetailQuery(group_id=group_id, mode=mode, depth=depth)
   return await get_node_detail(query, uuid)
+
+
+@app.delete(
+  "/node/{uuid}",
+  tags=["graph"],
+)
+async def delete_node_endpoint(uuid: str):
+  await delete_node(uuid)
+  return {"success": True}
 
 
 @app.on_event("shutdown")

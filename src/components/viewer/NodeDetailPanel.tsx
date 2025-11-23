@@ -1,19 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import { useViewerStore } from "@/lib/stores/viewerStore";
-import { useGraphitiNodeDetailsQuery } from "@/hooks/useGraphitiNode";
+import {
+  useDeleteNodeMutation,
+  useGraphitiNodeDetailsQuery,
+} from "@/hooks/useGraphitiNode";
 import { GraphRef } from "@/components/graph/Graph";
 import { Button } from "@/components/ui/button";
-import { BadgeCheck, GitBranch, Loader2, Pin } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { BadgeCheck, GitBranch, Loader2, Pin, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils/dates";
+import { toast } from "sonner";
 
 interface NodeDetailPanelProps {
   graphRef: React.RefObject<GraphRef | null>;
 }
 
 export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const groupId = useViewerStore((state) => state.selectedGroupId);
   const selectedNodeUuid = useViewerStore((state) => state.selectedNodeUuid);
+  const setSelectedNodeUuid = useViewerStore((state) => state.setSelectedNodeUuid);
   const mode = useViewerStore((state) => state.mode);
 
   const nodeQuery = useGraphitiNodeDetailsQuery({
@@ -22,8 +37,30 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
     mode,
   });
 
+  const deleteMutation = useDeleteNodeMutation({
+    groupId,
+    onSuccess: () => {
+      setSelectedNodeUuid(null);
+      setIsDeleteDialogOpen(false);
+      toast.success("ノードを削除しました");
+    },
+    onError: (error) => {
+      toast.error(`削除に失敗しました: ${error.message}`);
+    },
+  });
+
   const highlightEdge = (edgeId: string) => {
     graphRef.current?.zoomToLinkById(edgeId);
+  };
+
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedNodeUuid) {
+      deleteMutation.mutate(selectedNodeUuid);
+    }
   };
 
   let content = (
@@ -60,15 +97,26 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
     content = (
       <div className="space-y-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
-              {node.type}
-            </span>
-            {node.community_id && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {node.community_id}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                {node.type}
               </span>
-            )}
+              {node.community_id && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {node.community_id}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleDeleteClick}
+              title="ノードを削除"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
           <h4 className="mt-2 text-lg font-semibold">{node.name}</h4>
           {node.summary && (
@@ -174,12 +222,49 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
   }
 
   return (
-    <aside className="rounded-2xl border bg-card/80 p-4 shadow-sm">
-      <p className="text-sm font-semibold">Node Detail</p>
-      <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-2 text-sm">
-        {content}
-      </div>
-    </aside>
+    <>
+      <aside className="rounded-2xl border bg-card/80 p-4 shadow-sm">
+        <p className="text-sm font-semibold">Node Detail</p>
+        <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-2 text-sm">
+          {content}
+        </div>
+      </aside>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ノードを削除しますか？</DialogTitle>
+            <DialogDescription>
+              「{nodeQuery.data?.node.name}」を削除します。この操作は取り消せません。
+              関連するエッジも削除されます。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={deleteMutation.isPending}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  削除中...
+                </>
+              ) : (
+                "削除"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

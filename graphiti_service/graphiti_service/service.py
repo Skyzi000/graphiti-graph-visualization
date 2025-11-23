@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, Set, Tuple
 
 from fastapi import HTTPException
 from graphiti_core.edges import CommunityEdge, EntityEdge, EpisodicEdge
-from graphiti_core.nodes import CommunityNode, EntityNode, EpisodicNode
+from graphiti_core.nodes import CommunityNode, EntityNode, EpisodicNode, NodeNotFoundError
 
 from .graphiti_client import get_graphiti, is_graphiti_configured
 from .schemas import (
@@ -539,3 +539,42 @@ async def get_node_detail(params: NodeDetailQuery, node_uuid: str) -> NodeDetail
   )
   graph = await _graph_from_graphiti(detail_query)
   return _build_node_detail_from_graph(graph, node_uuid, params.depth)
+
+
+async def delete_node(node_uuid: str) -> None:
+  """Delete a node by UUID (supports Entity, Community, and Episodic nodes)."""
+  if not is_graphiti_configured():
+    raise HTTPException(
+      status_code=500,
+      detail="Graphiti/Neo4j connection is not configured.",
+    )
+
+  graphiti = await get_graphiti()
+  driver = graphiti.driver
+
+  # Try each node type in order (get_by_uuid raises NodeNotFoundError if not found)
+  try:
+    node = await EntityNode.get_by_uuid(driver, node_uuid)
+    await node.delete(driver)
+    return
+  except NodeNotFoundError:
+    pass
+
+  try:
+    node = await CommunityNode.get_by_uuid(driver, node_uuid)
+    await node.delete(driver)
+    return
+  except NodeNotFoundError:
+    pass
+
+  try:
+    node = await EpisodicNode.get_by_uuid(driver, node_uuid)
+    await node.delete(driver)
+    return
+  except NodeNotFoundError:
+    pass
+
+  raise HTTPException(
+    status_code=404,
+    detail=f"Node '{node_uuid}' not found.",
+  )

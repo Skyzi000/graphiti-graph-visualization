@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   GraphitiApiError,
   GraphitiNodeDetailResponse,
@@ -54,5 +54,42 @@ export function useGraphitiNodeDetailsQuery({
     queryFn: () => requestNodeDetail(groupId as string, nodeUuid as string, mode, depth),
     enabled: Boolean(groupId && nodeUuid),
     refetchOnWindowFocus: false,
+  });
+}
+
+async function requestDeleteNode(nodeUuid: string): Promise<void> {
+  const response = await fetch(
+    `/api/graphiti/node/${encodeURIComponent(nodeUuid)}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | GraphitiApiError
+      | null;
+    const errorMessage =
+      payload?.error || "Failed to delete node.";
+    throw new Error(errorMessage);
+  }
+}
+
+interface UseDeleteNodeParams {
+  groupId?: string;
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export function useDeleteNodeMutation({ groupId, onSuccess, onError }: UseDeleteNodeParams = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: requestDeleteNode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["graphiti-graph", groupId] });
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      onError?.(error);
+    },
   });
 }

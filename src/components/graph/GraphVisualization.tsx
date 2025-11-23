@@ -174,6 +174,7 @@ export const GraphVisualization = forwardRef<GraphRef, GraphVisualizationProps>(
 
         {triplets.length > 0 ? (
           <Graph
+            key={triplets.map((t) => t.sourceNode.uuid + t.targetNode.uuid + t.edge.uuid).sort((a, b) => a.localeCompare(b)).join(",")}
             ref={ref}
             triplets={graphTriplets}
             width={width}

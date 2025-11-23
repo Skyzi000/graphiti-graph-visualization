@@ -207,6 +207,33 @@ export async function fetchNodeDetail(
   return (await response.json()) as GraphitiNodeDetailResponse;
 }
 
+export async function deleteNode(uuid: string): Promise<void> {
+  if (FORCE_SAMPLE) {
+    return;
+  }
+
+  if (!baseUrl) {
+    throw createGraphitiError(
+      500,
+      "GRAPHITI_SERVICE_URL is not configured and sample data is disabled."
+    );
+  }
+
+  const url = new URL(`${baseUrl}/node/${encodeURIComponent(uuid)}`);
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: createHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await safeParseError(response);
+    throw createGraphitiError(response.status, errorPayload.error, {
+      details: errorPayload.details,
+    });
+  }
+}
+
 function appendQueryParams(url: URL, params: object): void {
   Object.entries(params as Record<string, unknown>).forEach(([key, value]) => {
     if (value === undefined || value === null) {
