@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Set, Tuple
 
 from fastapi import HTTPException
 from graphiti_core.edges import CommunityEdge, EntityEdge, EpisodicEdge
+from graphiti_core.errors import GroupsEdgesNotFoundError, GroupsNodesNotFoundError
 from graphiti_core.nodes import CommunityNode, EntityNode, EpisodicNode, NodeNotFoundError
 
 from .graphiti_client import get_graphiti, is_graphiti_configured
@@ -407,8 +408,17 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
   driver = graphiti.driver
   group_ids = [params.group_id]
 
+  logger.info(f"Fetching graph for group_ids={group_ids}, driver={driver}")
+
   async def _empty():
     return []
+
+  async def _safe_fetch(coro):
+    """Wrap a coroutine to return empty list on GroupsNotFound errors."""
+    try:
+      return await coro
+    except (GroupsEdgesNotFoundError, GroupsNodesNotFoundError):
+      return []
 
   include_episodes = params.include_episodes
   # NOTE: API level limit_nodes/limit_edges are applied *after* filtering.
@@ -425,12 +435,18 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
     community_edges,
     episodic_edges,
   ) = await asyncio.gather(
-    EntityNode.get_by_group_ids(driver, group_ids, limit=node_fetch_limit),
-    CommunityNode.get_by_group_ids(driver, group_ids),
-    EpisodicNode.get_by_group_ids(driver, group_ids) if include_episodes else _empty(),
-    EntityEdge.get_by_group_ids(driver, group_ids, limit=edge_fetch_limit),
-    CommunityEdge.get_by_group_ids(driver, group_ids),
-    EpisodicEdge.get_by_group_ids(driver, group_ids) if include_episodes else _empty(),
+    _safe_fetch(EntityNode.get_by_group_ids(driver, group_ids, limit=node_fetch_limit)),
+    _safe_fetch(CommunityNode.get_by_group_ids(driver, group_ids)),
+    _safe_fetch(EpisodicNode.get_by_group_ids(driver, group_ids)) if include_episodes else _empty(),
+    _safe_fetch(EntityEdge.get_by_group_ids(driver, group_ids, limit=edge_fetch_limit)),
+    _safe_fetch(CommunityEdge.get_by_group_ids(driver, group_ids)),
+    _safe_fetch(EpisodicEdge.get_by_group_ids(driver, group_ids)) if include_episodes else _empty(),
+  )
+
+  logger.info(
+    f"Fetched: entity_nodes={len(entity_nodes)}, community_nodes={len(community_nodes)}, "
+    f"episodic_nodes={len(episodic_nodes)}, entity_edges={len(entity_edges)}, "
+    f"community_edges={len(community_edges)}, episodic_edges={len(episodic_edges)}"
   )
 
   node_lookup: Dict[str, GraphitiNode] = {}

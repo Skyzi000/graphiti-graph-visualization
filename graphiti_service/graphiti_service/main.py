@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+# 環境変数を他のモジュールより先に読み込む
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import logging
 import os
+
+# ログ設定
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 from datetime import datetime, time, timezone
 from typing import Annotated, List, Literal
 
