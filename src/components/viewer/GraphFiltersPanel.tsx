@@ -3,6 +3,8 @@
 import {
   defaultGraphFilters,
   useViewerStore,
+  DEFAULT_RECENT_EPISODE_COUNT,
+  DEFAULT_CENTER_DEPTH,
 } from "@/lib/stores/viewerStore";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +34,15 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
   const [limitEdgesInput, setLimitEdgesInput] = useState(
     filters.limitEdges?.toString() ?? ""
   );
+  const [recentEpisodeCenter, setRecentEpisodeCenter] = useState(
+    filters.recentEpisodeCenter ?? true
+  );
+  const [recentEpisodeCountInput, setRecentEpisodeCountInput] = useState(
+    (filters.recentEpisodeCount ?? DEFAULT_RECENT_EPISODE_COUNT).toString()
+  );
+  const [centerDepthInput, setCenterDepthInput] = useState(
+    (filters.centerDepth ?? DEFAULT_CENTER_DEPTH).toString()
+  );
 
   useEffect(() => {
     setSearchValue(filters.search ?? "");
@@ -42,6 +53,13 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
       (filters.limitNodes ?? DEFAULT_LIMIT_NODES).toString()
     );
     setLimitEdgesInput(filters.limitEdges?.toString() ?? "");
+    setRecentEpisodeCenter(filters.recentEpisodeCenter ?? true);
+    setRecentEpisodeCountInput(
+      (filters.recentEpisodeCount ?? DEFAULT_RECENT_EPISODE_COUNT).toString()
+    );
+    setCenterDepthInput(
+      (filters.centerDepth ?? DEFAULT_CENTER_DEPTH).toString()
+    );
   }, [filters]);
 
   const isResetDisabled = useMemo(() => {
@@ -53,10 +71,23 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
       sinceValue === "" &&
       untilValue === "" &&
       includeEpisodes === defaultGraphFilters.includeEpisodes &&
+      recentEpisodeCenter === (defaultGraphFilters.recentEpisodeCenter ?? true) &&
+      recentEpisodeCountInput === DEFAULT_RECENT_EPISODE_COUNT.toString() &&
+      centerDepthInput === DEFAULT_CENTER_DEPTH.toString() &&
       limitNodesInput === defaultLimitNodesString &&
       limitEdgesInput === ""
     );
-  }, [searchValue, sinceValue, untilValue, includeEpisodes, limitNodesInput, limitEdgesInput]);
+  }, [
+    searchValue,
+    sinceValue,
+    untilValue,
+    includeEpisodes,
+    recentEpisodeCenter,
+    recentEpisodeCountInput,
+    centerDepthInput,
+    limitNodesInput,
+    limitEdgesInput,
+  ]);
 
   const handleApply = () => {
     const parsedLimitNodes =
@@ -67,12 +98,21 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
       limitEdgesInput.trim() === ""
         ? undefined
         : Number.parseInt(limitEdgesInput, 10);
+    const parsedRecentEpisodeCount = Number.parseInt(recentEpisodeCountInput, 10);
+    const parsedCenterDepth = Number.parseInt(centerDepthInput, 10);
 
     applyFilters({
       search: searchValue.trim() || undefined,
       since: sinceValue || undefined,
       until: untilValue || undefined,
       includeEpisodes,
+      recentEpisodeCenter,
+      recentEpisodeCount: Number.isFinite(parsedRecentEpisodeCount)
+        ? parsedRecentEpisodeCount
+        : undefined,
+      centerDepth: Number.isFinite(parsedCenterDepth)
+        ? parsedCenterDepth
+        : undefined,
       limitNodes: Number.isFinite(parsedLimitNodes)
         ? parsedLimitNodes
         : undefined,
@@ -87,6 +127,9 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
     setSinceValue("");
     setUntilValue("");
     setIncludeEpisodes(defaultGraphFilters.includeEpisodes);
+    setRecentEpisodeCenter(defaultGraphFilters.recentEpisodeCenter ?? true);
+    setRecentEpisodeCountInput(DEFAULT_RECENT_EPISODE_COUNT.toString());
+    setCenterDepthInput(DEFAULT_CENTER_DEPTH.toString());
     setLimitNodesInput(
       (defaultGraphFilters.limitNodes ?? DEFAULT_LIMIT_NODES).toString()
     );
@@ -161,6 +204,57 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
         </div>
 
         <div className="space-y-3 rounded-2xl border px-3 py-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-xs uppercase text-muted-foreground">
+                直近Episode中心
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                最新のEpisodeを中心に接続されたノードのみ表示
+              </p>
+            </div>
+            <Switch
+              checked={recentEpisodeCenter}
+              onCheckedChange={(value) => setRecentEpisodeCenter(value)}
+              disabled={disabled || !includeEpisodes}
+            />
+          </div>
+          {recentEpisodeCenter && includeEpisodes && (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase text-muted-foreground">
+                  Episode数
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={1}
+                  disabled={disabled}
+                  value={recentEpisodeCountInput}
+                  onChange={(event) =>
+                    setRecentEpisodeCountInput(event.target.value)
+                  }
+                  placeholder={DEFAULT_RECENT_EPISODE_COUNT.toString()}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase text-muted-foreground">
+                  深さ (hops)
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={1}
+                  disabled={disabled}
+                  value={centerDepthInput}
+                  onChange={(event) => setCenterDepthInput(event.target.value)}
+                  placeholder={DEFAULT_CENTER_DEPTH.toString()}
+                />
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-xs uppercase text-muted-foreground">

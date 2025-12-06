@@ -5,6 +5,9 @@ import { DEFAULT_LIMIT_NODES } from "@/lib/services/graphiti";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+export const DEFAULT_RECENT_EPISODE_COUNT = 10;
+export const DEFAULT_CENTER_DEPTH = 1;
+
 export const defaultGraphFilters: GraphFilters = {
   search: undefined,
   since: undefined,
@@ -13,6 +16,9 @@ export const defaultGraphFilters: GraphFilters = {
   limitNodes: DEFAULT_LIMIT_NODES,
   limitEdges: undefined,
   centerUuid: undefined,
+  recentEpisodeCenter: true,
+  recentEpisodeCount: DEFAULT_RECENT_EPISODE_COUNT,
+  centerDepth: DEFAULT_CENTER_DEPTH,
 };
 
 interface ViewerState {
@@ -87,6 +93,11 @@ export const useViewerStore = create<ViewerState>()(
             limitNodes: next.limitNodes ?? defaultGraphFilters.limitNodes,
             limitEdges: next.limitEdges,
             centerUuid: next.centerUuid,
+            recentEpisodeCenter:
+              next.recentEpisodeCenter ?? defaultGraphFilters.recentEpisodeCenter,
+            recentEpisodeCount:
+              next.recentEpisodeCount ?? defaultGraphFilters.recentEpisodeCount,
+            centerDepth: next.centerDepth ?? defaultGraphFilters.centerDepth,
           },
           filtersRevision: state.filtersRevision + 1,
         })),

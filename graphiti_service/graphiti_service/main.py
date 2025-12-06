@@ -18,7 +18,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .graphiti_client import close_graphiti
 from .schemas import GraphQuery, GraphResponse, NodeDetailQuery, NodeDetailResponse
-from .service import delete_node, get_graph, get_node_detail
+from .service import delete_node, get_graph, get_node_detail, get_recent_episodes
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_datetime(value: datetime | None, *, is_until: bool = False) -> datetime | None:
@@ -88,7 +90,19 @@ async def get_graph_endpoint(
   limit_nodes: Annotated[int | None, Query(le=2000)] = None,
   limit_edges: Annotated[int | None, Query(le=4000)] = None,
   include_episodes: Annotated[bool, Query()] = True,
+  recent_episode_center: Annotated[bool, Query()] = False,
+  recent_episode_count: Annotated[int, Query(ge=1, le=100)] = 10,
+  center_depth: Annotated[int, Query(ge=1, le=5)] = 1,
 ):
+  center_uuids: List[str] | None = None
+  if recent_episode_center:
+    recent_eps = await get_recent_episodes(group_id, limit=recent_episode_count)
+    logger.debug(f"recent_episode_center=True, fetched {len(recent_eps)} recent episodes")
+    if recent_eps:
+      center_uuids = [ep.uuid for ep in recent_eps]
+  elif center_uuid:
+    center_uuids = [center_uuid]
+
   query = GraphQuery(
     group_id=group_id,
     mode=mode,
@@ -101,7 +115,7 @@ async def get_graph_endpoint(
     limit_edges=limit_edges,
     include_episodes=include_episodes,
   )
-  return await get_graph(query)
+  return await get_graph(query, center_uuids=center_uuids, center_depth=center_depth)
 
 
 @app.get(

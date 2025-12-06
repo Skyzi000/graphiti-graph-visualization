@@ -22,6 +22,9 @@ export interface GraphitiGraphQuery {
   limit_nodes?: number;
   limit_edges?: number;
   include_episodes?: boolean;
+  recent_episode_center?: boolean;
+  recent_episode_count?: number;
+  center_depth?: number;
 }
 
 export interface GraphitiNodeDetailQuery {
@@ -91,6 +94,12 @@ export function parseGraphQueryParams(
 
   const nodeIds = searchParams.getAll("node_ids").filter(Boolean);
   const limitNodes = parseInteger(searchParams.get("limit_nodes")) ?? DEFAULT_LIMIT_NODES;
+  const recentEpisodeCenter = parseBoolean(
+    searchParams.get("recent_episode_center"),
+    false
+  );
+  const recentEpisodeCount = parseInteger(searchParams.get("recent_episode_count")) ?? 10;
+  const centerDepth = parseInteger(searchParams.get("center_depth")) ?? 1;
 
   return {
     group_id: groupId,
@@ -103,6 +112,9 @@ export function parseGraphQueryParams(
     limit_nodes: limitNodes,
     limit_edges: parseInteger(searchParams.get("limit_edges")),
     include_episodes: includeEpisodes,
+    recent_episode_center: recentEpisodeCenter,
+    recent_episode_count: recentEpisodeCount,
+    center_depth: centerDepth,
   };
 }
 
@@ -138,6 +150,9 @@ export function filtersToQuery(filters: GraphFilters): Partial<GraphitiGraphQuer
     limit_nodes: filters.limitNodes,
     limit_edges: filters.limitEdges,
     center_uuid: filters.centerUuid,
+    recent_episode_center: filters.recentEpisodeCenter,
+    recent_episode_count: filters.recentEpisodeCount,
+    center_depth: filters.centerDepth,
   };
 }
 

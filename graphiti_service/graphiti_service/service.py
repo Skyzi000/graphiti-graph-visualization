@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from graphiti_core.edges import CommunityEdge, EntityEdge, EpisodicEdge
 from graphiti_core.errors import GroupsEdgesNotFoundError, GroupsNodesNotFoundError
 from graphiti_core.nodes import CommunityNode, EntityNode, EpisodicNode, NodeNotFoundError
+from graphiti_core.utils.maintenance.graph_data_operations import retrieve_episodes
 
 from .graphiti_client import get_graphiti, is_graphiti_configured
 from .schemas import (
@@ -200,6 +201,61 @@ def _filter_communities(
   ]
 
 
+def _extract_connected_subgraph(
+  center_uuids: List[str],
+  all_nodes: List[GraphitiNode],
+  all_edges: List[GraphitiEdge],
+  depth: int = 1,
+) -> Tuple[List[GraphitiNode], List[GraphitiEdge]]:
+  """Extract nodes and edges connected to center nodes within depth hops.
+
+  Args:
+      center_uuids: List of center node UUIDs (e.g., recent episode UUIDs).
+      all_nodes: All available nodes.
+      all_edges: All available edges.
+      depth: Number of hops from center nodes (default: 1).
+
+  Returns:
+      Tuple of (filtered_nodes, filtered_edges)
+  """
+  node_map = {n.uuid: n for n in all_nodes}
+
+  valid_centers = [uuid for uuid in center_uuids if uuid in node_map]
+
+  logger.debug(
+    f"_extract_connected_subgraph: center_uuids={len(center_uuids)}, "
+    f"valid_centers={len(valid_centers)}, all_nodes={len(all_nodes)}, "
+    f"all_edges={len(all_edges)}, depth={depth}"
+  )
+
+  if not valid_centers:
+    logger.warning("No valid centers found, returning all nodes and edges")
+    return all_nodes, all_edges
+
+  visited_node_ids = set(valid_centers)
+  frontier = set(valid_centers)
+  collected_edge_uuids: Set[str] = set()
+
+  for _ in range(depth):
+    next_frontier: Set[str] = set()
+    for current in frontier:
+      for edge in all_edges:
+        if edge.source_uuid == current or edge.target_uuid == current:
+          collected_edge_uuids.add(edge.uuid)
+          other = edge.target_uuid if edge.source_uuid == current else edge.source_uuid
+          if other not in visited_node_ids and other in node_map:
+            visited_node_ids.add(other)
+            next_frontier.add(other)
+    frontier = next_frontier
+    if not frontier:
+      break
+
+  filtered_nodes = [node_map[nid] for nid in visited_node_ids if nid in node_map]
+  filtered_edges = [edge for edge in all_edges if edge.uuid in collected_edge_uuids]
+
+  return filtered_nodes, filtered_edges
+
+
 def _coerce_value(value):
   if isinstance(value, datetime):
     return value.astimezone(UTC).isoformat()
@@ -342,6 +398,7 @@ def _community_to_graphiti_community(node: CommunityNode) -> GraphitiCommunity:
 def _build_meta(
   params: GraphQuery,
   center_uuid: str | None = None,
+  center_uuids: List[str] | None = None,
 ) -> GraphitiGraphMeta:
   filters = {
     "mode": params.mode,
@@ -357,9 +414,13 @@ def _build_meta(
   }
   filters.update({k: v for k, v in optional_fields.items() if v})
 
+  effective_center = params.center_uuid or center_uuid
+  if not effective_center and center_uuids:
+    effective_center = center_uuids[0] if len(center_uuids) == 1 else None
+
   return GraphitiGraphMeta(
     group_id=params.group_id,
-    center_uuid=params.center_uuid or center_uuid,
+    center_uuid=effective_center,
     generated_at=datetime.now(tz=UTC).isoformat(),
     filters=filters,
   )
@@ -372,7 +433,17 @@ def _build_graph_response_from_lists(
   episodes: List[GraphitiEpisode],
   communities: List[GraphitiCommunity],
   center_uuid: str | None = None,
+  center_uuids: List[str] | None = None,
+  center_depth: int = 1,
 ) -> GraphResponse:
+  if center_uuids:
+    nodes, edges = _extract_connected_subgraph(
+      center_uuids,
+      nodes,
+      edges,
+      depth=center_depth,
+    )
+
   filtered_nodes = _filter_nodes(list(nodes), params)
   if not filtered_nodes:
     return GraphResponse(
@@ -380,7 +451,7 @@ def _build_graph_response_from_lists(
       edges=[],
       episodes=[],
       communities=[],
-      meta=_build_meta(params, center_uuid=center_uuid),
+      meta=_build_meta(params, center_uuid=center_uuid, center_uuids=center_uuids),
     )
 
   filtered_edges, referenced_episode_ids = _filter_edges(edges, filtered_nodes, params)
@@ -392,11 +463,15 @@ def _build_graph_response_from_lists(
     edges=filtered_edges,
     episodes=filtered_episodes,
     communities=filtered_communities,
-    meta=_build_meta(params, center_uuid=center_uuid),
+    meta=_build_meta(params, center_uuid=center_uuid, center_uuids=center_uuids),
   )
 
 
-async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
+async def _graph_from_graphiti(
+  params: GraphQuery,
+  center_uuids: List[str] | None = None,
+  center_depth: int = 1,
+) -> GraphResponse:
   if not is_graphiti_configured():
     raise HTTPException(
       status_code=500,
@@ -424,8 +499,11 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
   # NOTE: API level limit_nodes/limit_edges are applied *after* filtering.
   # ここで DB 取得時に絞り込みすぎると、日付ウィンドウで本来残るはずの
   # 新規ノード/エッジが落ちる。日付フィルタ使用時は取得段階での上限を外す。
-  node_fetch_limit = None if (params.since or params.until) else params.limit_nodes
-  edge_fetch_limit = None if (params.since or params.until) else params.limit_edges
+  # また、center_uuids が指定されている場合も同様に、サブグラフ抽出後に
+  # limit を適用する必要があるため、取得段階での上限を外す。
+  should_skip_db_limit = bool(params.since or params.until or center_uuids)
+  node_fetch_limit = None if should_skip_db_limit else params.limit_nodes
+  edge_fetch_limit = None if should_skip_db_limit else params.limit_edges
 
   (
     entity_nodes,
@@ -477,11 +555,50 @@ async def _graph_from_graphiti(params: GraphQuery) -> GraphResponse:
     edge_list,
     episode_list,
     community_list,
+    center_uuids=center_uuids,
+    center_depth=center_depth,
   )
 
 
-async def get_graph(params: GraphQuery) -> GraphResponse:
-  return await _graph_from_graphiti(params)
+async def get_graph(
+  params: GraphQuery,
+  center_uuids: List[str] | None = None,
+  center_depth: int = 1,
+) -> GraphResponse:
+  return await _graph_from_graphiti(params, center_uuids, center_depth)
+
+
+async def get_recent_episodes(group_id: str, limit: int = 10) -> List[GraphitiEpisode]:
+  """Get the most recent episodes for a group_id.
+
+  Uses graphiti_core's retrieve_episodes function which handles
+  time-based ordering and group filtering natively.
+
+  Args:
+      group_id: The group ID to fetch episodes for.
+      limit: Maximum number of episodes to return (default: 10).
+
+  Returns:
+      List of most recent episodes.
+  """
+  if not is_graphiti_configured():
+    raise HTTPException(500, "Graphiti not configured")
+
+  graphiti = await get_graphiti()
+  driver = graphiti.driver
+
+  try:
+    episodic_nodes = await retrieve_episodes(
+      driver=driver,
+      reference_time=datetime.now(tz=UTC),
+      last_n=limit,
+      group_ids=[group_id],
+    )
+
+    return [_episodic_node_to_episode(node) for node in episodic_nodes]
+
+  except (GroupsEdgesNotFoundError, GroupsNodesNotFoundError):
+    return []
 
 
 def _build_node_detail_from_graph(

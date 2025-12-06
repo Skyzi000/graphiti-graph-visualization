@@ -41,6 +41,9 @@ export interface GraphFilters {
   limitNodes?: number;
   limitEdges?: number;
   centerUuid?: string;
+  recentEpisodeCenter?: boolean;
+  recentEpisodeCount?: number;
+  centerDepth?: number;
 }
 
 export interface GraphitiApiError {
