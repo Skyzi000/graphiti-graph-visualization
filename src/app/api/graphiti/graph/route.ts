@@ -3,7 +3,7 @@ import {
   fetchGraph,
   parseGraphQueryParams,
 } from "@/lib/services/graphiti";
-import { GraphitiApiError } from "@/lib/types/graph";
+import { GraphitiApiError } from "@/lib/types/api";
 
 function isGraphitiApiError(error: unknown): error is GraphitiApiError {
   return (

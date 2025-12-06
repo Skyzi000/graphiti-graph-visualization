@@ -283,6 +283,9 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
     );
   } else if (nodeQuery.data) {
     const { node, neighbors, episodes } = nodeQuery.data;
+    const neighborNodes = neighbors.nodes ?? [];
+    const neighborEdges = neighbors.edges ?? [];
+    const episodeList = episodes ?? [];
 
     content = (
       <div className="space-y-5">
@@ -337,14 +340,14 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
             )}
         </div>
 
-        {episodes.length > 0 && (
+        {episodeList.length > 0 && (
           <div>
             <h5 className="flex items-center gap-2 text-sm font-semibold">
               <BadgeCheck className="h-4 w-4 text-primary" />
-              Episode ({episodes.length})
+              Episode ({episodeList.length})
             </h5>
             <ul className="mt-2 space-y-2 text-sm">
-              {episodes.map((episode) => {
+              {episodeList.map((episode) => {
                 const markdown =
                   typeof episode.content === "string" ? episode.content : "";
                 const withInjected = injectToolResultIntoDetails(markdown);
@@ -390,19 +393,19 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
           </div>
         )}
 
-        {neighbors.edges.length > 0 && (
+        {neighborEdges.length > 0 && (
           <div>
             <h5 className="flex items-center gap-2 text-sm font-semibold">
               <GitBranch className="h-4 w-4 text-primary" />
-              近傍ノード ({neighbors.nodes.length})
+              近傍ノード ({neighborNodes.length})
             </h5>
             <ul className="mt-2 space-y-2 text-sm">
-              {neighbors.edges.map((edge) => {
+              {neighborEdges.map((edge) => {
                 const counterpart =
-                  neighbors.nodes.find(
+                  neighborNodes.find(
                     (candidate) => candidate.uuid === edge.target_uuid
                   ) ||
-                  neighbors.nodes.find(
+                  neighborNodes.find(
                     (candidate) => candidate.uuid === edge.source_uuid
                   );
                 return (

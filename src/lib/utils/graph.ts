@@ -9,7 +9,7 @@ import type {
   GraphitiEdge,
   GraphitiGraphResponse,
   GraphitiNodeType,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 
 const labelByNodeType: Record<GraphitiNodeType, string> = {
   entity: "Entity",

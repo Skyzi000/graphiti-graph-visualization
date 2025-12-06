@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { GraphMode } from "@/lib/types/graph";
+import { GraphMode } from "@/lib/types/api";
 import { GraphitiExperience } from "./GraphitiExperience";
 import { useViewerStore } from "@/lib/stores/viewerStore";
 import { cn } from "@/lib/utils";

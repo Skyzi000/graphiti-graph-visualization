@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { GraphitiGraphResponse, Node } from "@/lib/types/graph";
+import { GraphitiGraphResponse, Node } from "@/lib/types/api";
 import { graphitiResponseToTriplets } from "@/lib/utils/graph";
 import { useGraphitiGraphQuery } from "@/hooks/useGraphitiGraph";
 import { useViewerStore } from "@/lib/stores/viewerStore";

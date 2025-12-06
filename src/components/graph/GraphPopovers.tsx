@@ -5,7 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { NodePopupContent, EdgePopupContent } from "@/lib/types/graph";
+import type { NodePopupContent, EdgePopupContent } from "@/lib/types/api";
 import { getNodeColor } from "@/lib/utils/nodeColors";
 import { useTheme } from "next-themes";
 import { useMemo } from "react";

@@ -11,7 +11,7 @@ import {
 import * as d3 from "d3";
 import colors from "tailwindcss/colors";
 import { useTheme } from "next-themes";
-import type { GraphTriplet, IdValue, GraphNode } from "@/lib/types/graph";
+import type { GraphTriplet, IdValue, GraphNode } from "@/lib/types/api";
 import {
   createLabelColorMap,
   getNodeColor as getNodeColorByLabel,

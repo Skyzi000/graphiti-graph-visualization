@@ -1,6 +1,6 @@
 "use client";
 
-import { GraphitiGraphResponse } from "@/lib/types/graph";
+import { GraphitiGraphResponse } from "@/lib/types/api";
 import { formatDate } from "@/lib/utils/dates";
 
 interface GraphStatsProps {
@@ -76,7 +76,7 @@ export function GraphStats({ graphData, isLoading }: GraphStatsProps) {
                 className="flex items-center justify-between rounded-xl border bg-background/40 px-3 py-2"
               >
                 <span className="font-medium">{community.label}</span>
-                {community.score !== undefined && (
+                {community.score != null && (
                   <span className="text-xs text-muted-foreground">
                     Score {Math.round(community.score * 100) / 100}
                   </span>

@@ -5,7 +5,7 @@ import {
   GraphitiApiError,
   GraphitiNodeDetailResponse,
   GraphMode,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 
 interface UseGraphitiNodeParams {
   groupId?: string;

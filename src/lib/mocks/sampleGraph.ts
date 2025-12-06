@@ -5,7 +5,7 @@ import {
   GraphitiNodeDetailResponse,
   GraphitiEpisode,
   GraphitiCommunity,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 
 const sampleNodes: GraphitiNode[] = [
   {

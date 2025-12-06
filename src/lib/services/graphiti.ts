@@ -1,14 +1,15 @@
 import {
   GraphFilters,
   GraphitiApiError,
-  GraphitiGraphResponse,
-  GraphitiNodeDetailResponse,
+  GraphResponse as GraphitiGraphResponse,
+  NodeDetailResponse as GraphitiNodeDetailResponse,
   GraphMode,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 import {
   SAMPLE_GRAPH_RESPONSE,
   SAMPLE_NODE_DETAILS,
 } from "@/lib/mocks/sampleGraph";
+import { schemas } from "@/../generated/api-client";
 
 export interface GraphitiGraphQuery {
   group_id: string;
@@ -170,7 +171,9 @@ export async function fetchGraph(
     });
   }
 
-  return (await response.json()) as GraphitiGraphResponse;
+  const rawData = await response.json();
+  const validated = schemas.GraphResponse.parse(rawData);
+  return validated as GraphitiGraphResponse;
 }
 
 export async function fetchNodeDetail(
@@ -204,7 +207,9 @@ export async function fetchNodeDetail(
     });
   }
 
-  return (await response.json()) as GraphitiNodeDetailResponse;
+  const rawData = await response.json();
+  const validated = schemas.NodeDetailResponse.parse(rawData);
+  return validated as GraphitiNodeDetailResponse;
 }
 
 export async function deleteNode(uuid: string): Promise<void> {
@@ -357,19 +362,19 @@ function buildSampleNodeDetail(uuid: string): GraphitiNodeDetailResponse {
         : undefined,
     },
     neighbors: {
-      nodes: detail.neighbors.nodes.map((node) => ({
+      nodes: (detail.neighbors.nodes ?? []).map((node) => ({
         ...node,
         labels: node.labels ? [...node.labels] : undefined,
         tags: node.tags ? [...node.tags] : undefined,
         metadata: node.metadata ? { ...node.metadata } : undefined,
         timestamps: node.timestamps ? { ...node.timestamps } : undefined,
       })),
-      edges: detail.neighbors.edges.map((edge) => ({
+      edges: (detail.neighbors.edges ?? []).map((edge) => ({
         ...edge,
         timestamps: edge.timestamps ? { ...edge.timestamps } : undefined,
       })),
     },
-    episodes: detail.episodes.map((episode) => ({
+    episodes: (detail.episodes ?? []).map((episode) => ({
       ...episode,
       message_ids: episode.message_ids
         ? [...episode.message_ids]

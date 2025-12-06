@@ -7,7 +7,7 @@ import {
   Node,
   RawTriplet,
   Edge,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 import { formatDate } from "@/lib/utils/dates";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";

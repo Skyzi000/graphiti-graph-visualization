@@ -9,7 +9,7 @@ import type {
   EdgePopupContent,
   Node,
   Edge,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 import { toGraphTriplets } from "@/lib/utils/graph";
 import { createLabelColorMap, getNodeColor } from "@/lib/utils/nodeColors";
 import { useTheme } from "next-themes";

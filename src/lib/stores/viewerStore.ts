@@ -1,6 +1,6 @@
 "use client";
 
-import { GraphFilters, GraphMode, Node } from "@/lib/types/graph";
+import { GraphFilters, GraphMode, Node } from "@/lib/types/api";
 import { DEFAULT_LIMIT_NODES } from "@/lib/services/graphiti";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";

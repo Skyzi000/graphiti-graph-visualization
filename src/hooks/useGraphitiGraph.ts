@@ -6,7 +6,7 @@ import {
   GraphitiGraphResponse,
   GraphMode,
   GraphitiApiError,
-} from "@/lib/types/graph";
+} from "@/lib/types/api";
 import { filtersToQuery } from "@/lib/services/graphiti";
 
 interface UseGraphitiGraphParams {
