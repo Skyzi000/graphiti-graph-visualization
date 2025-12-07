@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_LIMIT_NODES } from "@/lib/services/graphiti";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface GraphFiltersPanelProps {
   disabled?: boolean;
@@ -22,6 +28,7 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
   const applyFilters = useViewerStore((state) => state.applyFilters);
   const resetFilters = useViewerStore((state) => state.resetFilters);
 
+  const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(filters.search ?? "");
   const [sinceValue, setSinceValue] = useState(filters.since ?? "");
   const [untilValue, setUntilValue] = useState(filters.until ?? "");
@@ -138,35 +145,46 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
   };
 
   return (
-    <section className="rounded-3xl border bg-card/80 p-4 shadow-sm backdrop-blur">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-        <div>
-          <p className="text-sm font-semibold">Graphiti フィルター</p>
-          <p className="text-xs text-muted-foreground">
-            クエリパラメーターを変更し、Graphiti Graph Service のレスポンスを制御します。
-          </p>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <section className="rounded-3xl border bg-card/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <CollapsibleTrigger className="flex items-center gap-2 text-left">
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold">Graphiti フィルター</p>
+              <p className="text-xs text-muted-foreground">
+                クエリパラメーターを変更し、Graphiti Graph Service のレスポンスを制御します。
+              </p>
+            </div>
+          </CollapsibleTrigger>
+          {isOpen && (
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                disabled={isResetDisabled || disabled}
+              >
+                リセット
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleApply}
+                disabled={disabled}
+              >
+                適用
+              </Button>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            disabled={isResetDisabled || disabled}
-          >
-            リセット
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleApply}
-            disabled={disabled}
-          >
-            適用
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+        <CollapsibleContent>
+          <div className="grid gap-4 pt-3 md:grid-cols-3">
         <div className="space-y-2">
           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
             Search
@@ -300,7 +318,9 @@ export function GraphFiltersPanel({ disabled }: GraphFiltersPanelProps) {
             </div>
           </div>
         </div>
-      </div>
-    </section>
+          </div>
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }
