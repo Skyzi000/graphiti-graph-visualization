@@ -47,7 +47,7 @@ export function useGraphitiNodeDetailsQuery({
   groupId,
   nodeUuid,
   mode,
-  depth = 2,
+  depth = 1,
 }: UseGraphitiNodeParams) {
   return useQuery({
     queryKey: ["graphiti-node", groupId, nodeUuid, mode, depth],
