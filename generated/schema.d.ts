@@ -111,8 +111,10 @@ export interface components {
         GraphitiEpisode: {
             /** Uuid */
             uuid: string;
+            /** Name */
+            name: string;
             /** Summary */
-            summary: string;
+            summary?: string | null;
             /** Content */
             content: string;
             /** Timestamp */
@@ -251,6 +253,9 @@ export interface operations {
                 limit_nodes?: number | null;
                 limit_edges?: number | null;
                 include_episodes?: boolean;
+                recent_episode_center?: boolean;
+                recent_episode_count?: number;
+                center_depth?: number;
             };
             header?: never;
             path?: never;

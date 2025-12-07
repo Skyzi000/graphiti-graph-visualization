@@ -343,9 +343,11 @@ def _episodic_node_to_graphiti(node: EpisodicNode) -> GraphitiNode:
 
 def _episodic_node_to_episode(node: EpisodicNode) -> GraphitiEpisode:
   timestamp = _isoformat(node.valid_at) or _isoformat(node.created_at)
-  summary = node.source_description or node.name or node.content[:280]
+  name = node.name or node.source_description or "Episode"
+  summary = node.source_description if node.name else None
   return GraphitiEpisode(
     uuid=node.uuid,
+    name=name,
     summary=summary,
     content=node.content,
     timestamp=timestamp or datetime.now(tz=UTC).isoformat(),

@@ -363,7 +363,7 @@ export function NodeDetailPanel({ graphRef }: NodeDetailPanelProps) {
                       <CollapsibleTrigger className="group flex w-full items-start gap-2 rounded-2xl border bg-background/40 p-3 text-left hover:bg-background/60 transition-colors">
                         <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium">{episode.summary}</p>
+                          <p className="font-medium">{episode.name}</p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDate(episode.timestamp, "YYYY/MM/DD HH:mm")}
                           </p>

@@ -49,7 +49,8 @@ const GraphitiEdge = z
 const GraphitiEpisode = z
   .object({
     uuid: z.string(),
-    summary: z.string(),
+    name: z.string(),
+    summary: z.union([z.string(), z.null()]).optional(),
     content: z.string(),
     timestamp: z.string(),
     importance: z.union([z.number(), z.null()]).optional(),
@@ -179,6 +180,21 @@ const endpoints = makeApi([
         name: "include_episodes",
         type: "Query",
         schema: z.boolean().optional().default(true),
+      },
+      {
+        name: "recent_episode_center",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+      {
+        name: "recent_episode_count",
+        type: "Query",
+        schema: z.number().int().gte(1).lte(100).optional().default(10),
+      },
+      {
+        name: "center_depth",
+        type: "Query",
+        schema: z.number().int().gte(1).lte(5).optional().default(1),
       },
     ],
     response: GraphResponse,
