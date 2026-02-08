@@ -704,8 +704,9 @@ async def delete_node(node_uuid: str) -> None:
     pass
 
   try:
-    node = await EpisodicNode.get_by_uuid(driver, node_uuid)
-    await node.delete(driver)
+    await EpisodicNode.get_by_uuid(driver, node_uuid)
+    # Use Graphiti.remove_episode() to properly clean up associated edges and orphaned entities
+    await graphiti.remove_episode(node_uuid)
     return
   except NodeNotFoundError:
     pass
